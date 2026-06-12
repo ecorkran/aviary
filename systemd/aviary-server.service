@@ -1,0 +1,27 @@
+# aviary-server.service — leave-it-running Paper server (user unit).
+#
+# Install:
+#   mkdir -p ~/.config/systemd/user
+#   cp systemd/aviary-server.service ~/.config/systemd/user/
+#   # edit WorkingDirectory below to the absolute repo path first
+#   systemctl --user daemon-reload
+#   systemctl --user enable --now aviary-server
+#   loginctl enable-linger $USER     # keeps user units alive after logout
+#
+# Logs: journalctl --user -u aviary-server -f
+[Unit]
+Description=aviary Minecraft Paper server
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/aviary
+ExecStart=%h/aviary/scripts/start-server.sh
+Restart=on-failure
+RestartSec=10
+# graceful world save on stop
+KillSignal=SIGINT
+TimeoutStopSec=90
+
+[Install]
+WantedBy=default.target

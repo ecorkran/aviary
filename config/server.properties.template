@@ -1,0 +1,25 @@
+# aviary server.properties template — tuned for LLM-bot experiments.
+# offline mode for bots => keep this server LAN-ONLY. Do not port-forward.
+online-mode=false
+server-port=25565
+motd=aviary — agent experiment world
+
+# survival, gentle start; flip difficulty later for harder experiments
+gamemode=survival
+difficulty=easy
+hardcore=false
+
+# bots build near spawn; don't block them
+spawn-protection=0
+
+# modest distances keep server CPU + bot perception payloads sane
+view-distance=10
+simulation-distance=8
+
+max-players=20
+pvp=false
+allow-flight=true
+enable-command-block=true
+
+# keep world generation deterministic across rebuilds: set a seed you like
+# level-seed=

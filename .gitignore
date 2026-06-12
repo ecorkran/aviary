@@ -1,0 +1,12 @@
+# runtime / upstream — reproducible from scripts
+server/
+mindcraft/
+
+# secrets — never commit
+keys.json
+*.key
+.env
+
+# noise
+node_modules/
+*.log

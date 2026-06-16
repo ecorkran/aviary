@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(flatpak --version)",
+      "Bash(flatpak remotes *)"
+    ]
+  }
+}

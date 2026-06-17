@@ -195,6 +195,13 @@ OptiFine. Add the Fabric equivalents instead: **Continuity** (connected
 textures), **CIT Resewn** (custom item textures), **LambDynamicLights**
 (dynamic lighting). Most packs need none of these.
 
+### FPS meter
+
+- **Vanilla:** press **F3** for the debug screen — FPS is top-left, but buried
+  in debug clutter. Fine for a quick check, ugly for screenshots.
+- **Sodium (preferred):** **Options → Video Settings → General → "Show FPS"**
+  gives a clean corner counter with no F3 clutter. Use this while recording.
+
 ### Recording performance
 
 Sodium alone usually raises FPS above vanilla, so recording with a shader on is

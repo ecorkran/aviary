@@ -48,6 +48,9 @@ flatpak run org.prismlauncher.PrismLauncher
 Or find it in the application menu. Use your Microsoft account. Create a
 Minecraft Java 1.21.6 instance. Connect via Direct Connect → `127.0.0.1:25565`.
 
+See "Client rendering — shaders & textures" below for the verified
+Fabric + Iris + Sodium setup used for screenshots and video.
+
 ### 3 — Bot (freeform / interactive)
 
 ```bash
@@ -136,6 +139,68 @@ Mindcraft-specific commands also work directly):
 !stop             — interrupt current action
 !modes            — list active behavior modes (cowardice, self_defense, etc.)
 ```
+
+---
+
+## Client rendering — shaders & textures
+
+All client-side. The Paper server doesn't know or care these exist — you still
+connect to `127.0.0.1:25565` exactly as before. Set up in PrismLauncher on the
+hammerhead desktop, for screenshots and short videos.
+
+### Verified working config (2026-06-16)
+
+| Piece | Choice | Notes |
+|---|---|---|
+| Minecraft | 1.21.6 | must match the Paper server version |
+| Mod loader | **Fabric** (latest stable Fabric Loader) | loader version is NOT tied to MC version — pick newest non-beta |
+| Performance mod | **Sodium** (1.21.6 build) | replaces OptiFine's FPS optimization; also the render backbone Iris needs |
+| Shader loader | **Iris Shaders** (1.21.6 build) | replaces OptiFine's shader support; runs OptiFine-format shaderpacks |
+| Dependency | **Fabric API** (1.21.6 build) | Prism auto-resolves this when installing Sodium/Iris |
+| Shader pack | **Complementary Reimagined** | confirmed running; drop-in, swappable anytime |
+
+**Do NOT install OptiFine.** Sodium + Iris together replace it and are the
+modern standard. OptiFine uses its own loader, conflicts with Sodium (both
+rewrite the render pipeline = crash), and lags on new MC versions.
+
+### Setup steps (PrismLauncher)
+
+1. Instance → **Edit → Version** → confirm Minecraft is **1.21.6** → **Install
+   Fabric** → pick the **latest stable** Fabric Loader (the loader list shows
+   loader versions, not MC versions; there is no "Fabric 1.21.6").
+2. **Mods** tab → **Download mods** (Prism browses Modrinth + CurseForge in-app)
+   → install **Sodium**, **Iris Shaders**, **Fabric API**, all 1.21.6 builds.
+   Prism's browser auto-filters to the instance version and resolves deps.
+3. Launch once to confirm a clean boot.
+4. Drop a shader pack `.zip` into the instance's **`shaderpacks/`** folder
+   (right-click instance → **Folder** to open the instance dir).
+5. In-game: **Options → Video Settings → Shader Packs** → select it.
+
+### Texture (resource) packs — optional, no mods needed
+
+Resource packs are a vanilla feature, independent of Fabric/Iris/Sodium:
+
+1. Get any resource pack `.zip` tagged **1.21.x** (Modrinth or CurseForge —
+   Prism's mod browser also lists resource packs; filter to the instance version).
+2. Drop it into the instance's **`resourcepacks/`** folder.
+3. In-game: **Options → Resource Packs** → move it to the active (right) column.
+
+Resolution note: 16x = vanilla-faithful, 32x/64x = sharper, 128x+ = heavy
+(fine for stills, can cost FPS during recording on a heavy shader). Stack
+multiple packs by ordering them; the top pack wins for overlapping textures.
+
+**OptiFine-feature dependency:** if a texture pack says it "requires OptiFine"
+(connected textures, custom item models, dynamic lighting), do NOT switch to
+OptiFine. Add the Fabric equivalents instead: **Continuity** (connected
+textures), **CIT Resewn** (custom item textures), **LambDynamicLights**
+(dynamic lighting). Most packs need none of these.
+
+### Recording performance
+
+Sodium alone usually raises FPS above vanilla, so recording with a shader on is
+typically smooth. If a heavy shader tanks framerate during capture, swap to a
+light pack like **Sildur's Vibrant Lite** — shader packs are drop-in, no
+re-launch beyond reselecting in Video Settings.
 
 ---
 
@@ -229,6 +294,21 @@ Then just tell it in chat: `build something in a brutalist style` or
 
 For bolder survival behavior, flip `"cowardice": false` and use
 `"base_profile": "god_mode"` (invincibility + creative-style agency).
+
+### Code-writing (`!newAction`) — enabled
+
+`allow_insecure_coding` in `mindcraft/settings.js` is set to `true`. This
+enables the `!newAction` command, which lets the bot **write and run arbitrary
+JavaScript on the host** to solve building/automation problems it can't do with
+canned commands (e.g. precise structures).
+
+Security posture: the host is LAN-only. This flag is exactly why — it executes
+model-authored code on the machine. **Containerize before exposing the host to
+anything beyond the LAN.** Until then, treat the bot as trusted-code-execution.
+
+Caveat: `mindcraft/` is a gitignored clone, so this edit is not tracked in the
+repo. Re-cloning or resetting the clone reverts it to `false` — re-apply after
+any fresh checkout.
 
 ---
 

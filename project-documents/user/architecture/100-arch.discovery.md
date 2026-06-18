@@ -2,6 +2,7 @@
 docType: architecture
 layer: project
 project: aviary
+archIndex: 100
 initiative: 100
 component: discovery
 source: user/project-guides/001-initiative-plan.aviary.md

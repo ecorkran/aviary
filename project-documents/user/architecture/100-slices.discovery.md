@@ -3,7 +3,7 @@ docType: slice-plan
 parent: user/architecture/100-arch.discovery.md
 project: aviary
 dateCreated: 20260617
-dateUpdated: 20260617
+dateUpdated: 20260618
 status: not_started
 ---
 
@@ -20,7 +20,7 @@ findings F001 and F002 from `100-review.arch.discovery.md`).
 
 ## Foundation Work
 
-1. [ ] **(100) Spike Workspace and Findings Convention** — Establish where spike
+1. [ ] **(100) Spike Workspace and Findings Convention** — *Slice design: `user/slices/100-slice.spike-workspace-and-findings-convention.md`.* Establish where spike
    code lives and how findings are recorded before any probing begins. Define a
    disposable spike location (kept out of the durable tree, e.g. a gitignored
    `spikes/` path) and a single findings template that every spike fills in:

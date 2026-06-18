@@ -7,7 +7,7 @@ dependencies: [100-slice.spike-workspace-and-findings-convention]
 interfaces: []
 dateCreated: 20260618
 dateUpdated: 20260618
-status: not_started
+status: complete
 ---
 
 # Slice Design: World-State Query Spike
@@ -318,58 +318,94 @@ on a documented assumption rather than being hard-blocked.
 
 ### Verification Walkthrough
 
-This is the demo script the user follows to confirm the spike delivered. It is a
-**draft** to be refined when Phase 6 (Implementation) completes with the actual probe
-commands and observed numbers. Run from the repo root
+Refined after Phase 6 implementation (2026-06-18). Verified end-to-end against the
+live stack (Paper 1.21.6 on :25565, upstream Mindcraft runtime with the `scout`
+agent in-world). Run from the repo root
 (`/home/manta/source/repos/minecraft/aviary`).
 
-1. **Stack is up.** Confirm the Paper server is listening and bring up the runtime
-   bot:
-   ```
-   ss -ltn | grep :25565            # server reachable (long-running half)
-   # bring up the Mindcraft runtime + bot per the existing profile / MindServer
-   ```
-   Expect the server on `:25565` and a bot connected (the `MindServer` Socket.IO
-   endpoint, default `:8080`, listening once the runtime is up).
+**Two halves.** Steps 5–6 verify the **durable** artifacts and are runnable by any
+external agent at any time. Steps 1–4 reproduce the **empirical** measurements and
+require the live stack up **and** the disposable probe code present under
+`spikes/world-state/` — that code is gitignored and may already be deleted (the
+finding, not the code, is the deliverable). The probe recipe is given in step 2 so a
+verifier can recreate it; the committed finding records the numbers it produced.
 
-2. **Mineflayer-view read works and is measured.** Run the mineflayer-view probe and
-   observe it reading real world state via the existing `world.js` helpers:
+1. **Stack is up.**
    ```
-   node spikes/world-state/<view-probe>.js     # exact name set at implementation
+   ss -ltn | grep -E ':25565|:8080'
    ```
-   Expect printed world state (position, health/food, time, biome, nearby entities,
-   nearby blocks, inventory) plus the captured **payload size** and a **sustained
-   read frequency** — the raw cost numbers.
+   Expect `*:25565` (Paper server) and `127.0.0.1:8080` (the `MindServer` Socket.IO
+   endpoint, present once the runtime bot is up — start it with
+   `./scripts/start-bot.sh scout`). **Verified — both listening.**
 
-3. **Ground-truth comparison is observable.** Place or note a known block/entity in
-   the world, re-read, and confirm the probe surfaces the agreement (and any
-   divergence) the finding cites as its perception-gap example.
+2. **Mineflayer-view read works and is measured.** The probe is a standalone,
+   read-only connection. **Caveat (discovered in implementation):** it must create
+   its bot with the runtime's own `initBot()` (`mindcraft/src/utils/mcdata.js`), not a
+   bare `mineflayer.createBot()` — `world.js` depends on `mcdata` being initialized on
+   login, and `initBot` also throttles position packets (Paper-safe) and loads the
+   plugins. Bare `createBot` throws `Cannot read properties of null (reading
+   'biomes')` from `getBiomeName`. The probe also imports bare deps
+   (`mineflayer`, `vec3`) from the runtime's `node_modules` by path, since `spikes/`
+   has none of its own.
+   ```
+   node spikes/world-state/view-probe.mjs
+   ```
+   Expect a JSON report between `===PROBE-REPORT-START/END===` with real world state
+   (position, health/food, time, biome, nearby entities/blocks/players, inventory)
+   and a `cost` block. **Verified — observed `perReadBytes ≈ 320`,
+   `sustainedReadsPerSec ≈ 13–14`, `version 1.21.6`, `biome "beach"`.** A per-helper
+   breakdown (`bench-breakdown.mjs`) confirmed the cost is bimodal: scalar/entity
+   reads <0.02 ms each (>50k/sec); the two 16-radius block scans ~73–76 ms each
+   (~13/sec) — i.e. block scans are the entire cost of the combined read.
 
-4. **Seam is characterized.** Confirm how a Python caller obtains the state — either
-   the existing `MindServer` Socket.IO events carry it, or the finding states the
-   minimal addition needed. (If a Python-side check exists, it lives under
-   `spikes/world-state/` too.)
+3. **Ground-truth comparison is observable.** Place a known block via the server
+   console (the server runs in the `mc` tmux session; RCON/query are disabled) and
+   re-read with the view:
+   ```
+   tmux send-keys -t mc 'setblock 375 64 -80 minecraft:diamond_block' Enter
+   node spikes/world-state/groundtruth-probe.mjs
+   tmux send-keys -t mc 'setblock 375 64 -80 minecraft:air' Enter   # restore baseline
+   ```
+   Expect the probe to report `viewReportsAtCoord: "diamond_block"`,
+   `matchAtCoord: true`, `diamondInNearbyScan: true`. **Verified — exact match.**
+   (Server-log position on login also matched the view's reported position to 0.01.)
 
-5. **Finding exists, is complete, and is committed.** Confirm the durable artifact:
+4. **Seam is characterized.** The Python↔Node channel is Socket.IO `MindServer`. The
+   existing world-state path is the **`listen-to-agents` → `state-update`** push
+   (`mindcraft/src/mindcraft/mindserver.js`, payload from
+   `src/agent/library/full_state.js`): ~1 Hz, **scalar/summary state only** (position,
+   health/hunger, biome, weather, time, inventory+equipment, three immediate
+   surrounding blocks, nearby entity types + player names) — it deliberately omits the
+   expensive 16-radius block scans. Confirm by inspection:
+   ```
+   grep -n "state-update\|get-full-state\|listen-to-agents" mindcraft/src/mindcraft/mindserver.js
+   grep -n "getNearbyBlockTypes\|getBlockAtPosition" mindcraft/src/agent/library/full_state.js
+   ```
+   Expect the `state-update` interval + `get-full-state` emit in `mindserver.js`, and
+   `full_state.js` using only `getBlockAtPosition` (cheap, 3 blocks) — **not** the
+   radius scans. **Verified.** (No separate Python probe was needed; the seam is read
+   from source. Block-region ground truth is not on this channel — see the finding's
+   Implications for the minimal addition.)
+
+5. **Finding exists, is complete, and is committed.**
    ```
    ls project-documents/user/notes/101-notes.world-state-finding.md
    grep -cE '^## (Question|Method|Evidence / Observations|Decision|Cost notes|Implications for downstream initiatives|Confidence|Inconclusive → next step)$' \
      project-documents/user/notes/101-notes.world-state-finding.md
    ```
-   Expect the file to exist and the grep to print `8` (every template field present;
-   each filled to the bar, n/a fields justified not deleted).
+   Expect the file present and the grep to print `8`. **Verified — prints 8.**
 
-6. **Spike code is disposable, not committed.** Confirm nothing under
-   `spikes/world-state/` is tracked:
+6. **Spike code is disposable, not committed.**
    ```
    git status --short spikes/        # prints nothing (contents gitignored per slice 100)
    ```
-   The finding is committed; the probe code that produced it is not. The
-   `spikes/world-state/` directory may be deleted at any point after the finding is
+   **Verified — empty.** The finding is committed; the probe code that produced it is
+   not. `spikes/world-state/` may be deleted at any point after the finding is
    recorded.
 
-When steps 1–6 behave as described, the world-state mechanism question is answered
-(or scoped with a documented fallback) and initiative 120 is unblocked.
+When steps 5–6 pass, the deliverable is in place; steps 1–4 reproduce the evidence
+behind it. The world-state mechanism question is answered (mineflayer view, two-class
+cost model, server-side escalation path) and initiative 120 is unblocked.
 
 ## Risk Assessment
 

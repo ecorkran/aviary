@@ -8,7 +8,7 @@ audience: [human, ai]
 description: Concept for aviary
 dependsOn: []
 dateCreated: 20260617
-dateUpdated: 20260617
+dateUpdated: 20260618
 status: in_progress
 ---
 
@@ -145,14 +145,24 @@ making the fork a self-contained deployable.
   needed to automate complex tasks); a squadron-style MCP tool surface may follow.
   Not committal — settle in Phase 2. (Author has existing squadron/repowire MCP
   tooling the tool-surface approach would fit.)
-- **World-state query:** Lean toward reading the bot's own view (mineflayer) the
-  runtime already maintains — cheap, no extra connection. Strong temptation toward
-  an *independent observer connection* for ground-truth scoring: the gap between
-  "what the bot believes it built" and "what is actually there" is itself a
-  capability signal, and a decoupled observer makes a more trustworthy judge.
-  Likely path: start with the mineflayer view, adopt an independent observer for
-  ground truth; settle with a spike. This decision also drives the efficiency
-  question (how much state, how often, where to optimize).
+- **World-state query — SETTLED by Discovery spike 101**
+  (`user/notes/101-notes.world-state-finding.md`). Read from the **bot's mineflayer
+  view** via the runtime's `world.js` helpers. Measured against the live stack: the
+  view matches server ground truth exactly (position, block-at-coordinate, entity
+  presence) within the bot's loaded chunks, so it is trustworthy as the scoring
+  authority. Cost is **bimodal** — scalar/entity/inventory reads are effectively free
+  (<0.02 ms, tens of thousands/sec); only 16-radius block scans are expensive
+  (~75 ms, ~13/sec) and must be budgeted or replaced with targeted `bot.blockAt`
+  lookups. The *independent observer* temptation is resolved: a second read-only
+  connection works and is cheap (one bot slot), so it is **available as a decoupling
+  option** rather than required — the agent's view is accurate enough that eval need
+  not adopt an observer for trust, only for decoupling if desired. Escalate to a
+  server-side source only for truth outside render distance. Python↔Node seam: the
+  existing Socket.IO `MindServer` already pushes scalar state at ~1 Hz
+  (`state-update`); block-region ground truth would need a small addition or the
+  eval's own mineflayer connection. (Original lean — "start with mineflayer view,
+  adopt an observer for ground truth, settle with a spike" — confirmed, with the
+  observer downgraded from expected-necessary to available-if-wanted.)
 - **Eval scoring:** Objective and automatable — programmatic world-state checks
   plus task completion/telemetry (duration, action/token counts, `!newAction`
   error capture). Rubric/LLM-judge scoring of subjective build quality is out of

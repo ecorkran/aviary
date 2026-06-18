@@ -7,7 +7,7 @@ dependencies: []
 interfaces: [101-slice.world-state-query-spike, 102-slice.mindcraft-capability-and-fork-boundary-spike]
 dateCreated: 20260618
 dateUpdated: 20260618
-status: not_started
+status: complete
 ---
 
 # Slice Design: Spike Workspace and Findings Convention
@@ -237,52 +237,83 @@ for the copying author to fill (`slice`, `dateCreated`, `status`).
 ### Verification Walkthrough
 
 This is the demo script proving the slice delivers. Run from the repo root
-(`/home/manta/source/repos/minecraft/aviary`).
+(`/home/manta/source/repos/minecraft/aviary`). Verified end-to-end during
+implementation (2026-06-18) on branch
+`100-slice.spike-workspace-and-findings-convention`; actual results and caveats
+recorded inline below.
 
 1. **Workspace exists and is documented:**
    ```
    cat spikes/README.md
    ```
-   Expect the marker text explaining the disposable/gitignored purpose.
+   Expect the marker text explaining the disposable/gitignored purpose (four
+   points: disposable spike code; contents gitignored, only the marker tracked;
+   findings are the durable artifact; a spike dir may be deleted after its finding
+   is recorded). **Verified — present.**
 
 2. **Spike code is ignored, marker is tracked:**
    ```
-   echo "scratch" > spikes/probe-test/scratch.js
+   mkdir -p spikes/probe-test && echo "scratch" > spikes/probe-test/scratch.js
    git status --short spikes/
    ```
-   Expect: `spikes/probe-test/scratch.js` does **not** appear (it is ignored);
-   `spikes/README.md` is tracked. Clean up: `rm -rf spikes/probe-test`.
+   Expect: `spikes/probe-test/scratch.js` does **not** appear (it is ignored).
+   **Verified** — once the marker is committed (Task 4), `git status --short
+   spikes/` prints nothing. *Note:* before the marker is committed, this command
+   instead prints `?? spikes/` (the untracked marker; the ignored scratch file is
+   still correctly absent). Clean up: `rm -rf spikes/probe-test`.
 
-3. **Marker itself is tracked:**
+3. **Marker itself is tracked, scratch is ignored** — use the *quiet* form for an
+   unambiguous exit code:
    ```
-   git check-ignore -v spikes/README.md ; echo "exit=$?"
+   git check-ignore -q spikes/README.md ; echo "marker ignored? exit=$?"
+   git check-ignore -q spikes/probe-test/scratch.js ; echo "scratch ignored? exit=$?"
    ```
-   Expect `exit=1` (not ignored). Contrast:
-   ```
-   git check-ignore -v spikes/probe-test/scratch.js
-   ```
-   Expect a match line (it *is* ignored).
+   Expect: marker `exit=1` (**not** ignored), scratch `exit=0` (**is** ignored).
+   **Verified.**
+
+   **Caveat — do not use `-v` to judge the marker.** `git check-ignore -v
+   spikes/README.md` reports the *last matching pattern*, which is the negation
+   rule (`.gitignore:NN:!spikes/README.md`), and **exits 0**, not 1. That match
+   line confirms the un-ignore rule fired — i.e. the marker is *not* ignored — but
+   the exit code is the opposite of what a naive reading expects. The quiet form
+   above is the reliable check. (`-v` on the scratch file behaves as expected:
+   prints `.gitignore:NN:spikes/*` and exits 0.)
 
 4. **Template is complete and copyable:**
    ```
-   sed -n '1,80p' project-documents/user/templates/discovery-finding.template.md
+   grep -cE '^## (Question|Method|Evidence / Observations|Decision|Cost notes|Implications for downstream initiatives|Confidence|Inconclusive → next step)$' \
+     project-documents/user/templates/discovery-finding.template.md
    ```
-   Confirm all eight fields are present: Question, Method,
-   Evidence/Observations, Decision, Cost notes, Implications for downstream
-   initiatives, Confidence, Inconclusive → next step.
+   Expect `8` — all eight fields present, in order: Question, Method,
+   Evidence / Observations, Decision, Cost notes, Implications for downstream
+   initiatives, Confidence, Inconclusive → next step. **Verified — prints 8.**
+   (To read the template, `sed -n '1,80p' <path>` also works.)
 
 5. **Dry-run the convention (no commit needed):** copy the template to the
    conventional location for the next spike and confirm the path/name fits the
    convention:
    ```
+   mkdir -p project-documents/user/notes
    cp project-documents/user/templates/discovery-finding.template.md \
       project-documents/user/notes/101-notes.world-state-finding.md
    ```
-   Confirm the name matches `nnn-notes.{finding-name}.md`. Remove it if not
-   starting 101 yet: `rm project-documents/user/notes/101-notes.world-state-finding.md`.
+   Confirm the name matches `nnn-notes.{finding-name}.md`. **Verified — copies
+   cleanly.** Remove it if not starting 101 yet:
+   `rm project-documents/user/notes/101-notes.world-state-finding.md`. (The
+   `user/notes/` directory is not committed by this slice — git does not track
+   empty directories; it materializes when slice 101 writes its real finding.)
 
 When steps 1–5 behave as described, the foundation is in place and 101/102 are
 unblocked.
+
+#### Caveat: workspace marker has no YAML frontmatter (intentional)
+
+`spikes/README.md` deliberately carries **no** YAML frontmatter, unlike the
+findings template. It is a workspace marker / signage for a gitignored scratch
+directory at the repo root, not a typed `project-documents/` artifact — no docType
+in `file-naming-conventions.md` fits it, and the slice design fixes its content as
+four prose bullets. The frontmatter requirement applies to the project documents
+this slice adds (the findings template, which carries valid `notes` frontmatter).
 
 ## Implementation Notes
 

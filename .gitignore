@@ -10,3 +10,7 @@ keys.json
 # noise
 node_modules/
 *.log
+
+# disposable discovery spike code — only the marker is tracked
+spikes/*
+!spikes/README.md

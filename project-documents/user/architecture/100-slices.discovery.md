@@ -4,7 +4,7 @@ parent: user/architecture/100-arch.discovery.md
 project: aviary
 dateCreated: 20260617
 dateUpdated: 20260618
-status: not_started
+status: in_progress
 ---
 
 # Slice Plan: Discovery
@@ -36,7 +36,7 @@ findings F001 and F002 from `100-review.arch.discovery.md`).
 done. Ordered here by enablement priority: the world-state spike unblocks the
 Eval Harness (120), the highest-value downstream initiative.*
 
-1. [ ] **(101) World-State Query Spike** — Empirically determine how aviary reads
+1. [ ] **(101) World-State Query Spike** — *Slice design: `user/slices/101-slice.world-state-query-spike.md`.* Empirically determine how aviary reads
    ground-truth world state for eval scoring, and at what cost. Exercise at least
    the bot's own mineflayer view; probe an independent-observer connection if the
    view proves insufficient for ground truth. Characterize the Python↔Node seam
